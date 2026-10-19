@@ -1,0 +1,4 @@
+# Los scripts y plantillas se ejecutan en Linux: deben conservar finales de línea LF
+*.tftpl text eol=lf
+*.sh     text eol=lf
+*.yml    text eol=lf

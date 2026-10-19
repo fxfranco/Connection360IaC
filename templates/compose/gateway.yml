@@ -1,0 +1,77 @@
+# ==================================================================================================
+# Instancia GATEWAY: Connection360.ApiGateway (YARP). Recibe el trafico del ALB (HTTP 8080) y lo
+# redirige a Connection360.Api y Connection360Notification.Api por sus IP privadas (variables CORE_API_URL
+# y NOTIFICATION_API_URL). El TLS, si se usa, termina en el ALB.
+# ==================================================================================================
+name: connection360-gateway
+
+services:
+  api-gateway:
+    image: ${REGISTRY}/connection360.apigateway:${APIGATEWAY_VERSION}
+    container_name: connection360_apigateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      Logging__LogLevel__Default: ${LOG_LEVEL_DEFAULT}
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      # Detras del ALB nunca se redirige HTTP -> HTTPS dentro del gateway (el ALB ya habla HTTP con el).
+      HttpsRedirection__Enabled: "false"
+      # El gateway SOLO recibe trafico del ALB (security group): se confia en X-Forwarded-* para ver la IP real del cliente.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Roles: ${JWT_ROLES}
+      Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES}
+      Jwt__RefreshTokenDays: ${JWT_REFRESH_TOKEN_DAYS}
+      RateLimiting__PermitLimit: ${RATE_LIMIT_PERMIT_LIMIT}
+      RateLimiting__WindowSeconds: ${RATE_LIMIT_WINDOW_SECONDS}
+      RateLimiting__QueueLimit: ${RATE_LIMIT_QUEUE_LIMIT}
+      Cors__AllowedOrigins__0: ${CORS_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ORIGIN_1}
+      Cors__AllowedOrigins__2: ${CORS_ORIGIN_2}
+      Cors__AllowedOrigins__3: ${CORS_ORIGIN_3}
+      # ----- YARP: rutas -----
+      ReverseProxy__Routes__signalr-route__ClusterId: signalr-cluster
+      ReverseProxy__Routes__signalr-route__Order: "1"
+      ReverseProxy__Routes__signalr-route__Match__Path: /api/v{version}/hubs/notifications/{**catch-all}
+      ReverseProxy__Routes__signalr-route__Transforms__0__RequestHeader: X-Forwarded-By
+      ReverseProxy__Routes__signalr-route__Transforms__0__Set: ApiGateway
+      ReverseProxy__Routes__notification-route__ClusterId: notification-cluster
+      ReverseProxy__Routes__notification-route__Order: "2"
+      ReverseProxy__Routes__notification-route__Match__Path: /api/v{version}/notifications/{**catch-all}
+      ReverseProxy__Routes__notification-route__Transforms__0__PathPattern: /api/v{version}/notifications/{**catch-all}
+      ReverseProxy__Routes__notification-route__Transforms__1__RequestHeader: X-Forwarded-By
+      ReverseProxy__Routes__notification-route__Transforms__1__Set: ApiGateway
+      ReverseProxy__Routes__products-route__ClusterId: products-cluster
+      ReverseProxy__Routes__products-route__Order: "3"
+      ReverseProxy__Routes__products-route__Match__Path: /api/{**catch-all}
+      ReverseProxy__Routes__products-route__Transforms__0__PathPattern: /api/{**catch-all}
+      ReverseProxy__Routes__products-route__Transforms__1__RequestHeader: X-Forwarded-By
+      ReverseProxy__Routes__products-route__Transforms__1__Set: ApiGateway
+      # ----- YARP: clusters (destinos = IP privada FIJA de cada instancia) -----
+      ReverseProxy__Clusters__signalr-cluster__LoadBalancingPolicy: RoundRobin
+      ReverseProxy__Clusters__signalr-cluster__Destinations__destination1__Address: ${NOTIFICATION_API_URL}
+      ReverseProxy__Clusters__signalr-cluster__HttpRequest__ActivityTimeout: 00:05:00
+      ReverseProxy__Clusters__signalr-cluster__HttpRequest__AllowResponseBuffering: "false"
+      ReverseProxy__Clusters__notification-cluster__LoadBalancingPolicy: RoundRobin
+      ReverseProxy__Clusters__notification-cluster__Destinations__destination1__Address: ${NOTIFICATION_API_URL}
+      ReverseProxy__Clusters__notification-cluster__HealthCheck__Active__Enabled: "true"
+      ReverseProxy__Clusters__notification-cluster__HealthCheck__Active__Interval: 00:00:10
+      ReverseProxy__Clusters__notification-cluster__HealthCheck__Active__Timeout: 00:00:05
+      ReverseProxy__Clusters__notification-cluster__HealthCheck__Active__Path: /health
+      ReverseProxy__Clusters__products-cluster__LoadBalancingPolicy: RoundRobin
+      ReverseProxy__Clusters__products-cluster__Destinations__destination1__Address: ${CORE_API_URL}
+      ReverseProxy__Clusters__products-cluster__HealthCheck__Active__Enabled: "true"
+      ReverseProxy__Clusters__products-cluster__HealthCheck__Active__Interval: 00:00:10
+      ReverseProxy__Clusters__products-cluster__HealthCheck__Active__Timeout: 00:00:05
+      ReverseProxy__Clusters__products-cluster__HealthCheck__Active__Path: /health
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

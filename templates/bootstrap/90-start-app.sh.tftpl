@@ -1,0 +1,9 @@
+
+# ---- Arranque de la aplicacion ---------------------------------------------------------------------
+cd "$APP_DIR"
+${wait_lines}
+echo "[bootstrap] descargando imagenes"
+retry docker compose pull
+docker compose up -d
+docker compose ps
+echo "[bootstrap] fin $(date -Is)"

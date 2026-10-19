@@ -1,0 +1,83 @@
+# ==================================================================================================
+# Valores NO secretos del ambiente dev.   terraform apply -var-file=environments/dev.tfvars
+# Los secretos van en secrets.auto.tfvars (se carga solo; NO se versiona).
+# ==================================================================================================
+
+# ---------- General ----------
+aws_region   = "us-east-1"
+aws_profile  = "seminario2"
+project_name = "connection360"
+
+# ---------- Red ----------
+#my_ip        = "200.122.208.2/32" # Universidad tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
+#my_ip        = "191.156.35.95/32" # Celular tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
+my_ip        = "190.251.241.154/32" # Casa tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
+vpc_cidr     = "172.20.0.0/23"
+pub_subnets  = ["172.20.0.0/26", "172.20.0.64/26"]
+priv_subnets = ["172.20.0.128/26", "172.20.0.192/26"]
+
+availability_zone_a = "us-east-1a"
+availability_zone_b = "us-east-1b"
+
+# ---------- Instancias (AWS Academy: familias t3 hasta large) ----------
+key_name                   = "KP-Sem2"
+instance_profile_name      = "" # opcional: "LabInstanceProfile" habilita Session Manager (SSM); el despliegue no lo necesita
+gateway_instance_type      = "t3.small"
+api_instance_type          = "t3.medium"
+notification_instance_type = "t3.small"
+etl_instance_type          = "t3.small"
+data_instance_type         = "t3.large"
+data_volume_size           = 50
+
+# ---------- Imagenes Docker (Docker Hub) ----------
+registry                 = "fxfranco13"
+apigateway_version       = "1.0.0-alphabaseinit.1"
+api_version              = "1.0.0-alphabaseinit.1"
+notification_api_version = "1.0.0-alphabaseinit.1"
+etl_orchestrator_version = "1.0.0-alphabaseinit.1"
+etl_app_version          = "1.0.0-alphabaseinit.1"
+
+# Imagen de migraciones Alembic (ver Connection360DataBase/postgres_db/deploy-migrations-image.md)
+migrations_image   = "fxfranco13/connection360.migrations"
+migrations_version = "latest"
+
+# Si los repositorios de Docker Hub son privados, define dockerhub_username y dockerhub_token en secrets.auto.tfvars
+
+# ---------- Bases de datos / Kafka ----------
+postgres_image_tag            = "" # PostgreSQL 17+ (las migraciones usan GRANT MAINTAIN)
+mongo_image_tag               = ""
+kafka_image_tag               = ""
+postgres_db_name              = ""
+postgres_admin_user           = ""
+mongo_root_user               = ""
+mongo_database                = ""
+mongo_notification_collection = ""
+kafka_topic                   = ""
+kafka_group_id                = ""
+
+# ---------- Aplicacion ----------
+jwt_issuer   = ""
+jwt_audience = ""
+jwt_roles    = ""
+
+# Origenes del front permitidos por CORS (1 a 4). Pon aqui la URL real de tu front.
+cors_origins = ["",""]
+
+smtp_server                = ""
+smtp_port                  = 
+smtp_sender_name           = ""
+smtp_check_cert_revocation = 
+
+# ---------- ETL ----------
+etl_enabled         = true
+etl_cron            = "*/5 * * * *"
+etl_timezone        = "America/Bogota"
+etl_timeout_minutes = 15
+
+# SOLO DESARROLLO: true = el ETL acepta cualquier certificado TLS de las APIs externas (requiere imagen del ETL reconstruida).
+external_api_allow_invalid_cert = false
+
+# ---------- Varios ----------
+log_level             = "Information"
+wait_for_data_seconds = 900
+acm_certificate_arn   = "" # ARN de un certificado ACM para activar HTTPS:443 en el ALB
