@@ -1,0 +1,69 @@
+# ==================================================================================================
+# Instancia ETL: Connection360.Etl.Orchestrator (servicio permanente que lanza el ETL segun el cron)
+# y Connection360.Etl.App (corrida manual). Usan PostgreSQL y MongoDB (telemetria). Consumen las APIs
+# externas por las URL de las variables *_BASE_URL (deben ser alcanzables DESDE AWS).
+# ==================================================================================================
+name: connection360-etl
+
+x-etl-env: &etl-env
+  Logging__LogLevel__Default: ${LOG_LEVEL_DEFAULT}
+  Logging__LogLevel__Microsoft: Warning
+  Logging__LogLevel__Microsoft.Hosting.Lifetime: Information
+  Observability__Enabled: ${OBSERVABILITY_ENABLED}
+  Observability__Mongo__ConnectionString: ${MONGO_CONNECTION}
+  Observability__Mongo__DatabaseName: ${MONGO_DATABASE}
+  DOTNET_ENVIRONMENT: Production
+  ConnectionStrings__PostgresConnection: ${POSTGRES_CONNECTION}
+  EtlJobControl__ApplicationDataSheetRetentionDays: ${ETL_JOB_CONTROL_RETENTION_DAYS}
+  MaterializedViews__RefreshEnabled: ${ETL_VIEWS_REFRESH_ENABLED}
+  MaterializedViews__CommandTimeoutSeconds: ${ETL_VIEWS_COMMAND_TIMEOUT_SECONDS}
+  EtlChangeTracking__SystemUser: ${ETL_SYSTEM_USER}
+  ExternalApi__PaginationEnabled: ${EXTERNAL_API_PAGINATION_ENABLED}
+  ExternalApi__PageSize: ${EXTERNAL_API_PAGE_SIZE}
+  # SOLO DESARROLLO: true = el ETL acepta cualquier certificado TLS de las APIs externas.
+  ExternalApi__AllowInvalidServerCertificate: ${EXTERNAL_API_ALLOW_INVALID_CERT}
+  ExternalApi__Apis__BPMS__BaseUrl: ${BPMS_BASE_URL}
+  ExternalApi__Apis__BPMS__DataEndpoint: /api/BPMS/excelfields/latest-data
+  ExternalApi__Apis__BPMS__ApiKey: ${BPMS_API_KEY}
+  ExternalApi__Apis__BPMS__TimeoutSeconds: ${EXTERNAL_API_TIMEOUT_SECONDS}
+  ExternalApi__Apis__DATALOGS__BaseUrl: ${DATALOGS_BASE_URL}
+  ExternalApi__Apis__DATALOGS__DataEndpoint: /api/BPMS/excelfields/latestLogs-data
+  ExternalApi__Apis__DATALOGS__ApiKey: ${DATALOGS_API_KEY}
+  ExternalApi__Apis__DATALOGS__TimeoutSeconds: ${EXTERNAL_API_TIMEOUT_SECONDS}
+  ExternalApi__Apis__SIM__BaseUrl: ${SIM_BASE_URL}
+  ExternalApi__Apis__SIM__DataEndpoint: /api/SIM/excelfields/latest-data
+  ExternalApi__Apis__SIM__ApiKey: ${SIM_API_KEY}
+  ExternalApi__Apis__SIM__TimeoutSeconds: ${EXTERNAL_API_TIMEOUT_SECONDS}
+  ExternalApi__Apis__OPENCOMEX__BaseUrl: ${OPENCOMEX_BASE_URL}
+  ExternalApi__Apis__OPENCOMEX__DataEndpoint: /api/OpenComex/excelfields/latest-data
+  ExternalApi__Apis__OPENCOMEX__ApiKey: ${OPENCOMEX_API_KEY}
+  ExternalApi__Apis__OPENCOMEX__TimeoutSeconds: ${EXTERNAL_API_TIMEOUT_SECONDS}
+  ExternalApi__Apis__ASISCOMEX__BaseUrl: ${ASISCOMEX_BASE_URL}
+  ExternalApi__Apis__ASISCOMEX__DataEndpoint: /api/AsisComex/excelfields/latest-data
+  ExternalApi__Apis__ASISCOMEX__ApiKey: ${ASISCOMEX_API_KEY}
+  ExternalApi__Apis__ASISCOMEX__TimeoutSeconds: ${EXTERNAL_API_TIMEOUT_SECONDS}
+  ExternalApi__Apis__SYSTEMCARRIER__BaseUrl: ${SYSTEMCARRIER_BASE_URL}
+  ExternalApi__Apis__SYSTEMCARRIER__DataEndpoint: /api/Carrier/excelfields/latest-data
+  ExternalApi__Apis__SYSTEMCARRIER__ApiKey: ${SYSTEMCARRIER_API_KEY}
+  ExternalApi__Apis__SYSTEMCARRIER__TimeoutSeconds: ${EXTERNAL_API_TIMEOUT_SECONDS}
+
+services:
+  etl-orchestrator:
+    image: ${REGISTRY}/connection360.etl.orchestrator:${ETL_ORCHESTRATOR_VERSION}
+    container_name: connection360_etl_orchestrator
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      <<: *etl-env
+      Orchestrator__CronJobs__0__Enabled: ${ETL_ENABLED}
+      Orchestrator__CronJobs__0__CronExpression: ${ETL_CRON}
+      Orchestrator__CronJobs__0__TimeZoneId: ${ETL_TIMEZONE}
+      Orchestrator__CronJobs__0__TimeoutMinutes: ${ETL_TIMEOUT_MINUTES}
+
+  # Corrida unica y termina. No arranca con "docker compose up":  docker compose run --rm etl-app
+  etl-app:
+    image: ${REGISTRY}/connection360.etl.app:${ETL_APP_VERSION}
+    container_name: connection360_etl_app
+    profiles: ["manual"]
+    environment:
+      <<: *etl-env

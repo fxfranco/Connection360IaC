@@ -1,0 +1,24 @@
+
+# ---- Disco de datos EBS (${volume_id}) -> /data ----------------------------------------------------
+VOL_ID="${volume_id}"
+DEV="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_$${VOL_ID//-/}"
+echo "[bootstrap] esperando el volumen $VOL_ID ($DEV)"
+for i in $(seq 1 120); do
+  [ -e "$DEV" ] && break
+  sleep 5
+done
+if [ ! -e "$DEV" ]; then
+  echo "[bootstrap] ERROR: el volumen $VOL_ID no aparecio como dispositivo"
+  exit 1
+fi
+if ! blkid "$DEV" >/dev/null 2>&1; then
+  echo "[bootstrap] volumen nuevo: creando sistema de archivos xfs"
+  mkfs.xfs -L c360data "$DEV"
+fi
+mkdir -p /data
+UUID_DATA=$(blkid -s UUID -o value "$DEV")
+grep -q "$UUID_DATA" /etc/fstab || echo "UUID=$UUID_DATA /data xfs defaults,nofail 0 2" >> /etc/fstab
+mount -a
+mountpoint -q /data || { echo "[bootstrap] ERROR: /data no quedo montado"; exit 1; }
+mkdir -p /data/docker
+echo "[bootstrap] /data montado: $(df -h /data | tail -1)"
