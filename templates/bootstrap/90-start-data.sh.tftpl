@@ -1,0 +1,13 @@
+
+# ---- Arranque de PostgreSQL / MongoDB / Kafka + migraciones Alembic ------------------------------------
+cd "$APP_DIR"
+echo "[bootstrap] descargando imagenes"
+retry docker compose pull
+# 'up -d' arranca todo en orden y espera a que terminen las migraciones (servicio 'migrations'), tras lo
+# cual abre el puerto 5499 (servicio 'migrations-ready') para que las otras instancias continuen.
+if ! docker compose up -d; then
+  echo "[bootstrap] ERROR: no se completo 'docker compose up -d' (revisa las migraciones):"
+  docker compose logs --no-color migrations || true
+fi
+docker compose ps
+echo "[bootstrap] fin $(date -Is)"

@@ -1,0 +1,23 @@
+
+# ---- Docker + Docker Compose -------------------------------------------------------------------------
+retry dnf install -y docker
+mkdir -p /etc/docker
+cat > /etc/docker/daemon.json <<'C360_DAEMON_EOF'
+${daemon_json}
+C360_DAEMON_EOF
+${docker_systemd_snippet}
+systemctl daemon-reload
+systemctl enable --now docker
+usermod -aG docker ec2-user || true
+
+COMPOSE_VERSION="${compose_version}"
+COMPOSE_URL="https://github.com/docker/compose/releases/download/$${COMPOSE_VERSION}/docker-compose-linux-x86_64"
+mkdir -p /usr/local/lib/docker/cli-plugins
+TMP_DIR=$(mktemp -d)
+retry curl -fsSL -o "$TMP_DIR/docker-compose" "$COMPOSE_URL"
+retry curl -fsSL -o "$TMP_DIR/docker-compose.sha256" "$COMPOSE_URL.sha256"
+( cd "$TMP_DIR" && echo "$(cut -d' ' -f1 docker-compose.sha256)  docker-compose" | sha256sum -c - )
+install -m 0755 "$TMP_DIR/docker-compose" /usr/local/lib/docker/cli-plugins/docker-compose
+rm -rf "$TMP_DIR"
+docker compose version
+${docker_login_snippet}
