@@ -1,0 +1,43 @@
+# ==================================================================================================
+# Instancia API: Connection360.Api. Usa PostgreSQL, MongoDB (telemetria/observabilidad) y publica
+# eventos en Kafka. Solo accesible desde el gateway (security group).
+# ==================================================================================================
+name: connection360-api
+
+services:
+  api-connection360:
+    image: ${REGISTRY}/connection360.api:${API_VERSION}
+    container_name: connection360_api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      Logging__LogLevel__Default: ${LOG_LEVEL_DEFAULT}
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+      Observability__Enabled: ${OBSERVABILITY_ENABLED}
+      Observability__Mongo__ConnectionString: ${MONGO_CONNECTION}
+      Observability__Mongo__DatabaseName: ${MONGO_DATABASE}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Roles: ${JWT_ROLES}
+      KafkaSettings__BootstrapServers: ${KAFKA_BOOTSTRAP_SERVERS}
+      KafkaSettings__GroupId: ${KAFKA_GROUP_ID}
+      KafkaSettings__Topic: ${KAFKA_TOPIC}
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__PostgresConnection: ${POSTGRES_CONNECTION}
+      Auth0Management__Domain: ${AUTH0_DOMAIN}
+      Auth0Management__ClientId: ${AUTH0_CLIENT_ID}
+      Auth0Management__ClientSecret: ${AUTH0_CLIENT_SECRET}
+      OutboxPublisher__PollingIntervalSeconds: ${OUTBOX_POLLING_INTERVAL_SECONDS}
+      ExternalApi__Apis__OPENSTREETMAP__BaseUrl: ${OPENSTREETMAP_BASE_URL}
+      ExternalApi__Apis__OPENSTREETMAP__DataEndpoint: /search?q=
+      ExternalApi__Apis__OPENSTREETMAP__ApiKey: ${OPENSTREETMAP_API_KEY}
+      ExternalApi__Apis__OPENSTREETMAP__TimeoutSeconds: ${EXTERNAL_API_TIMEOUT_SECONDS}
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

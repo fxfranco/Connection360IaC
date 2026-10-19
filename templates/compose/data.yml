@@ -1,0 +1,124 @@
+# ==================================================================================================
+# Instancia de DATOS: PostgreSQL + MongoDB + Zookeeper + Kafka + migraciones Alembic.
+# Equivale a los docker-compose de Connection360DataBase (postgres_db y mongo_db) en una sola instancia.
+# Los datos viven en volumenes Docker cuyo data-root esta en el disco EBS persistente (/data/docker).
+# Variables: archivo .env de esta misma carpeta (lo genera Terraform).
+# ==================================================================================================
+name: connection360-data
+
+services:
+  postgres:
+    image: postgres:${POSTGRES_IMAGE_TAG}
+    container_name: bd-postgres-conex360
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Lo usa db-init/01-init.sh (solo la primera vez, con el volumen vacio) para crear apicore_user.
+      APICORE_USER_PASSWORD: ${APICORE_USER_PASSWORD}
+    # Cada servicio .NET abre hasta 100 conexiones (Maximum Pool Size=100): el valor por defecto (100) se queda corto.
+    command: ["postgres", "-c", "max_connections=300", "-c", "shared_buffers=512MB"]
+    shm_size: 256m
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # -h 127.0.0.1: comprueba el servidor FINAL por TCP (el temporal de la inicializacion solo escucha por socket).
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  mongodb:
+    image: mongo:${MONGO_IMAGE_TAG}
+    container_name: mongodb_conex360noti
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    command: ["--wiredTigerCacheSizeGB", "1"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD-SHELL', 'mongosh --quiet --eval "db.adminCommand({ping:1}).ok" | grep -q 1']
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:${KAFKA_IMAGE_TAG}
+    container_name: zookeeper_container
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+
+  kafka:
+    image: confluentinc/cp-kafka:${KAFKA_IMAGE_TAG}
+    container_name: kafka_container
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Un solo listener: lo usan las instancias api/notification de la VPC (IP privada FIJA de esta instancia).
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://${DATA_PRIVATE_IP}:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_HEAP_OPTS: "-Xms1g -Xmx1g"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  # Migraciones Alembic (Connection360DataBase/postgres_db). Corre una vez y termina.
+  # Repetir a mano:  docker compose run --rm migrations
+  migrations:
+    image: ${MIGRATIONS_IMAGE}:${MIGRATIONS_VERSION}
+    container_name: connection360_migrations
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    command: ["alembic", "upgrade", "head"]
+
+  # Senal para las demas instancias: el puerto 5499 se abre SOLO cuando las migraciones terminaron bien.
+  migrations-ready:
+    image: busybox:1.36
+    container_name: connection360_migrations_ready
+    restart: unless-stopped
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    ports:
+      - "5499:5499"
+    command: ["sh", "-c", "while true; do echo ready | nc -l -p 5499; done"]
+
+volumes:
+  postgres_data:
+  mongo_data:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_data:

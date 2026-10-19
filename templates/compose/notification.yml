@@ -1,0 +1,48 @@
+# ==================================================================================================
+# Instancia NOTIFICATION: Connection360Notification.Api. Consume eventos de Kafka, guarda en MongoDB,
+# envia correo por SMTP y expone SignalR. Solo accesible desde el gateway (security group).
+# ==================================================================================================
+name: connection360-notification
+
+services:
+  api-notification:
+    image: ${REGISTRY}/connection360notification.api:${NOTIFICATION_API_VERSION}
+    container_name: connection360_notification_api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      Logging__LogLevel__Default: ${LOG_LEVEL_DEFAULT}
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+      Observability__Enabled: ${OBSERVABILITY_ENABLED}
+      Observability__Mongo__ConnectionString: ${MONGO_CONNECTION}
+      Observability__Mongo__DatabaseName: ${MONGO_DATABASE}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Roles: ${JWT_ROLES}
+      KafkaSettings__BootstrapServers: ${KAFKA_BOOTSTRAP_SERVERS}
+      KafkaSettings__GroupId: ${KAFKA_GROUP_ID}
+      KafkaSettings__Topic: ${KAFKA_TOPIC}
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Persistence__Provider: MongoDB
+      MongoDbSettings__ConnectionString: ${MONGO_CONNECTION}
+      MongoDbSettings__DatabaseName: ${MONGO_DATABASE}
+      MongoDbSettings__CollectionName: ${MONGO_NOTIFICATION_COLLECTION}
+      # Acceso a PostgreSQL disponible para esta instancia (security group abierto hacia 5432).
+      ConnectionStrings__PostgresConnection: ${POSTGRES_CONNECTION}
+      SmtpSettings__Server: ${SMTP_SERVER}
+      SmtpSettings__Port: ${SMTP_PORT}
+      SmtpSettings__SenderName: ${SMTP_SENDER_NAME}
+      SmtpSettings__SenderEmail: ${SMTP_SENDER_EMAIL}
+      SmtpSettings__Password: ${SMTP_PASSWORD}
+      SmtpSettings__RecipientEmail: ${SMTP_RECIPIENT_EMAIL}
+      SmtpSettings__TimeoutSeconds: ${SMTP_TIMEOUT_SECONDS}
+      SmtpSettings__CheckCertificateRevocation: ${SMTP_CHECK_CERT_REVOCATION}
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

@@ -1,0 +1,36 @@
+#!/bin/bash
+# =====================================================================================================
+# Generado por Terraform (user_data). NO editar a mano: se pierde al reemplazar la instancia.
+# Rol de esta instancia: ${role}
+# Registro de lo ocurrido en el arranque: /var/log/connection360-bootstrap.log
+# =====================================================================================================
+set -euo pipefail
+exec > >(tee -a /var/log/connection360-bootstrap.log) 2>&1
+echo "[bootstrap] inicio $(date -Is) rol=${role}"
+
+APP_DIR=/opt/connection360
+mkdir -p "$APP_DIR"
+
+# retry <comando...>: reintenta (la NAT/ruta de la subred privada puede tardar unos segundos en estar lista).
+retry() {
+  local n
+  for n in $(seq 1 30); do
+    if "$@"; then return 0; fi
+    echo "[bootstrap] reintento $n/30 de: $*"
+    sleep 10
+  done
+  return 1
+}
+
+# wait_for <host> <puerto> <nombre> [segundos]: espera a que un puerto TCP responda; si no, avisa y continua.
+wait_for() {
+  local host="$1" port="$2" name="$3" max="$${4:-${wait_seconds}}" start=$SECONDS
+  until timeout 3 bash -c "exec 3<>/dev/tcp/$host/$port" 2>/dev/null; do
+    if (( SECONDS - start > max )); then
+      echo "[bootstrap] AVISO: $name ($host:$port) no respondio en $${max}s; continuo de todos modos"
+      return 0
+    fi
+    sleep 5
+  done
+  echo "[bootstrap] $name ($host:$port) disponible"
+}
