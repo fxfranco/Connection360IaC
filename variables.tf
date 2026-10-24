@@ -234,6 +234,12 @@ variable "mongo_notification_collection" {
   default = "notificationMessage"
 }
 
+variable "mongo_basic_user_collection" {
+  description = "Coleccion de MongoDB donde Notification guarda los usuarios de Auth0 sincronizados (id, identificacion, correo, telefono)"
+  type        = string
+  default     = "basicUserData"
+}
+
 variable "kafka_topic" {
   type    = string
   default = "notification-events"
@@ -315,7 +321,14 @@ variable "smtp_password" {
 }
 
 variable "smtp_recipient_email" {
-  type = string
+  description = "Correo de RESPALDO: se usa solo si el cliente no tiene un correo valido en basicUserData"
+  type        = string
+}
+
+variable "smtp_conexion360_url" {
+  description = "URL de Conexion360 que aparece como Consultar mi envio en el correo de cambio de estado (http/https). Vacia = sin enlace"
+  type        = string
+  default     = ""
 }
 
 variable "smtp_check_cert_revocation" {
@@ -342,6 +355,59 @@ variable "etl_timezone" {
 variable "etl_timeout_minutes" {
   type    = number
   default = 15
+}
+
+# ---------- Sincronizacion de usuarios Auth0 -> Notification (topico de Kafka -> coleccion basicUserData) ----------
+variable "user_sync_enabled" {
+  description = "Connection360.Api publica los usuarios de Auth0 al arrancar y de forma periodica"
+  type        = bool
+  default     = true
+}
+
+variable "user_sync_topic" {
+  description = "Topico de Kafka de la sincronizacion (el mismo lo publica Api y lo consume Notification). El broker crea los topicos automaticamente"
+  type        = string
+  default     = "notification-users"
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]{1,200}$", var.user_sync_topic))
+    error_message = "user_sync_topic: solo letras, numeros, punto, guion y guion bajo (nombre valido de topico de Kafka)."
+  }
+}
+
+variable "user_sync_interval_minutes" {
+  description = "Cada cuantos minutos se repite la sincronizacion despues de la primera, que corre al arrancar"
+  type        = number
+  default     = 60
+  validation {
+    condition     = var.user_sync_interval_minutes >= 1
+    error_message = "user_sync_interval_minutes debe ser como minimo 1."
+  }
+}
+
+variable "user_sync_batch_size" {
+  description = "Usuarios por mensaje de Kafka"
+  type        = number
+  default     = 200
+  validation {
+    condition     = var.user_sync_batch_size >= 1 && var.user_sync_batch_size <= 1000
+    error_message = "user_sync_batch_size debe estar entre 1 y 1000."
+  }
+}
+
+variable "user_sync_startup_retry_seconds" {
+  description = "Espera entre los reintentos de la primera sincronizacion si Auth0 o Kafka aun no responden"
+  type        = number
+  default     = 30
+  validation {
+    condition     = var.user_sync_startup_retry_seconds >= 0
+    error_message = "user_sync_startup_retry_seconds no puede ser negativo."
+  }
+}
+
+variable "user_sync_group_id" {
+  description = "Grupo de consumo del topico de usuarios en Notification. Vacio = <kafka_group_id>-users"
+  type        = string
+  default     = ""
 }
 
 variable "external_api_allow_invalid_cert" {

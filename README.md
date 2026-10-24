@@ -144,6 +144,16 @@ entra por SSH, edita `/opt/connection360/.env` y ejecuta `sudo /opt/connection36
 - Los valores se escriben entre comillas simples en el `.env` de cada instancia, por eso **no pueden contener `'`
   ni saltos de línea** (Terraform lo valida antes de crear nada). Las contraseñas de Postgres/Mongo solo admiten
   `A-Z a-z 0-9 . _ ~ -` (mín. 12) porque viajan dentro de URLs y cadenas de conexión.
+- **Sincronización de usuarios Auth0 → Notification** (`user_sync_*` y `mongo_basic_user_collection` en `dev.tfvars`,
+  sin secretos nuevos): `Connection360.Api` lee los usuarios de Auth0 al arrancar y luego cada `user_sync_interval_minutes`,
+  y los publica por lotes en el tópico `user_sync_topic` (Kafka lo crea solo: `KAFKA_AUTO_CREATE_TOPICS_ENABLE`).
+  `Connection360Notification.Api` los consume con su propio grupo (`user_sync_group_id`, por defecto
+  `<kafka_group_id>-users`) y los guarda sin duplicados en la colección `mongo_basic_user_collection`
+  (`basicUserData`). La aplicación M2M de Auth0 necesita los scopes `read:users`, `update:users`, `read:roles`,
+  `create:role_members` y `delete:role_members` (sin `read:roles` o `read:role_members` Auth0 responde 403
+  «Insufficient scope» al consultar el rol de un usuario). De cada usuario se envían el id de Auth0, su correo y, de su
+  `user_metadata`, `document`, `fullName` y `phone.number`. Auth0 solo permite paginar los primeros 1000 usuarios
+  de `GET /users`; el Api lo registra como advertencia si se alcanza ese tope.
 - Los secretos quedan en el `user_data` de las instancias y en el estado de Terraform (S3 cifrado). Trata el bucket
   del estado y el acceso SSH como sensibles. Nada de esto va dentro de las imágenes.
 

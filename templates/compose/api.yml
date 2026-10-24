@@ -31,6 +31,12 @@ services:
       Auth0Management__ClientId: ${AUTH0_CLIENT_ID}
       Auth0Management__ClientSecret: ${AUTH0_CLIENT_SECRET}
       OutboxPublisher__PollingIntervalSeconds: ${OUTBOX_POLLING_INTERVAL_SECONDS}
+      # Sincronizacion de usuarios de Auth0 hacia Notification (topico USER_SYNC_TOPIC -> coleccion basicUserData).
+      Auth0UserSync__Enabled: ${USER_SYNC_ENABLED}
+      Auth0UserSync__Topic: ${USER_SYNC_TOPIC}
+      Auth0UserSync__PollingIntervalMinutes: ${USER_SYNC_INTERVAL_MINUTES}
+      Auth0UserSync__BatchSize: ${USER_SYNC_BATCH_SIZE}
+      Auth0UserSync__StartupRetryDelaySeconds: ${USER_SYNC_STARTUP_RETRY_SECONDS}
       ExternalApi__Apis__OPENSTREETMAP__BaseUrl: ${OPENSTREETMAP_BASE_URL}
       ExternalApi__Apis__OPENSTREETMAP__DataEndpoint: /search?q=
       ExternalApi__Apis__OPENSTREETMAP__ApiKey: ${OPENSTREETMAP_API_KEY}

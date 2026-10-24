@@ -30,6 +30,10 @@ services:
       MongoDbSettings__ConnectionString: ${MONGO_CONNECTION}
       MongoDbSettings__DatabaseName: ${MONGO_DATABASE}
       MongoDbSettings__CollectionName: ${MONGO_NOTIFICATION_COLLECTION}
+      # Usuarios de Auth0 sincronizados desde el Api (topico USER_SYNC_TOPIC -> coleccion basicUserData).
+      BasicUserSync__Topic: ${USER_SYNC_TOPIC}
+      BasicUserSync__GroupId: ${USER_SYNC_GROUP_ID}
+      BasicUserSync__CollectionName: ${MONGO_BASIC_USER_COLLECTION}
       # Acceso a PostgreSQL disponible para esta instancia (security group abierto hacia 5432).
       ConnectionStrings__PostgresConnection: ${POSTGRES_CONNECTION}
       SmtpSettings__Server: ${SMTP_SERVER}
@@ -38,6 +42,7 @@ services:
       SmtpSettings__SenderEmail: ${SMTP_SENDER_EMAIL}
       SmtpSettings__Password: ${SMTP_PASSWORD}
       SmtpSettings__RecipientEmail: ${SMTP_RECIPIENT_EMAIL}
+      SmtpSettings__Conexion360Url: ${SMTP_CONEXION360_URL}
       SmtpSettings__TimeoutSeconds: ${SMTP_TIMEOUT_SECONDS}
       SmtpSettings__CheckCertificateRevocation: ${SMTP_CHECK_CERT_REVOCATION}
     healthcheck:

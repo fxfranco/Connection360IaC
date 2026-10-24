@@ -95,18 +95,29 @@ locals {
       OPENSTREETMAP_BASE_URL          = "https://nominatim.openstreetmap.org"
       OPENSTREETMAP_API_KEY           = ""
       EXTERNAL_API_TIMEOUT_SECONDS    = "30"
+
+      # Sincronizacion de usuarios de Auth0 hacia Notification (Auth0UserSync__* en el Api)
+      USER_SYNC_ENABLED               = tostring(var.user_sync_enabled)
+      USER_SYNC_TOPIC                 = var.user_sync_topic
+      USER_SYNC_INTERVAL_MINUTES      = tostring(var.user_sync_interval_minutes)
+      USER_SYNC_BATCH_SIZE            = tostring(var.user_sync_batch_size)
+      USER_SYNC_STARTUP_RETRY_SECONDS = tostring(var.user_sync_startup_retry_seconds)
     })
 
     notification = merge(local.env_common, local.env_jwt, local.env_mongo_observability, local.env_kafka, {
       NOTIFICATION_API_VERSION      = var.notification_api_version
       POSTGRES_CONNECTION           = local.postgres_connection
       MONGO_NOTIFICATION_COLLECTION = var.mongo_notification_collection
+      MONGO_BASIC_USER_COLLECTION   = var.mongo_basic_user_collection
+      USER_SYNC_TOPIC               = var.user_sync_topic
+      USER_SYNC_GROUP_ID            = var.user_sync_group_id
       SMTP_SERVER                   = var.smtp_server
       SMTP_PORT                     = tostring(var.smtp_port)
       SMTP_SENDER_NAME              = var.smtp_sender_name
       SMTP_SENDER_EMAIL             = var.smtp_sender_email
       SMTP_PASSWORD                 = var.smtp_password
       SMTP_RECIPIENT_EMAIL          = var.smtp_recipient_email
+      SMTP_CONEXION360_URL          = var.smtp_conexion360_url
       SMTP_TIMEOUT_SECONDS          = "30"
       SMTP_CHECK_CERT_REVOCATION    = tostring(var.smtp_check_cert_revocation)
     })

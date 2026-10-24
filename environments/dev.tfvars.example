@@ -52,6 +52,7 @@ postgres_admin_user           = ""
 mongo_root_user               = ""
 mongo_database                = ""
 mongo_notification_collection = ""
+mongo_basic_user_collection   = ""
 kafka_topic                   = ""
 kafka_group_id                = ""
 
@@ -67,6 +68,20 @@ smtp_server                = ""
 smtp_port                  = 
 smtp_sender_name           = ""
 smtp_check_cert_revocation = 
+# URL de Conexion360 para el enlace "Consultar mi envio" del correo de cambio de estado.
+smtp_conexion360_url       = ""
+
+# ---------- Sincronizacion de usuarios Auth0 -> Notification ----------
+# El Api publica los usuarios de Auth0 al arrancar y luego cada user_sync_interval_minutes en el topico user_sync_topic;
+# Notification los guarda sin duplicados en la coleccion mongo_basic_user_collection. Kafka crea el topico automaticamente.
+# De cada usuario se envian el id de Auth0, su correo y, de su user_metadata, document, fullName y phone.number.
+user_sync_enabled               = 
+user_sync_topic                 = ""
+user_sync_interval_minutes      = 
+user_sync_batch_size            = 
+user_sync_startup_retry_seconds = 
+# Vacio = "<kafka_group_id>-users"
+user_sync_group_id = ""
 
 # ---------- ETL ----------
 etl_enabled         = true
