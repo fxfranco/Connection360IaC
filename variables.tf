@@ -336,6 +336,38 @@ variable "smtp_check_cert_revocation" {
   default = true
 }
 
+# ---------- SMS (Brevo) - Connection360Notification.Api ----------
+# URL base de la API de Brevo (debe terminar en "/"). Vacia = el servicio usa https://api.brevo.com/v3/.
+variable "brevo_sms_base_url" {
+  type    = string
+  default = "https://api.brevo.com/v3/"
+}
+
+# API key de Brevo (transactionalSMS). Va en secrets.auto.tfvars, nunca en el repo.
+variable "brevo_sms_api_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+# Remitente del SMS: alfanumerico de hasta 11 caracteres (o numerico de hasta 15).
+variable "brevo_sms_sender" {
+  type    = string
+  default = "Conexion360"
+}
+
+# URL de Conexion360 que se incluye en el texto del SMS (@URL conexion360@). Vacia = usa smtp_conexion360_url.
+variable "brevo_sms_conexion360_url" {
+  type    = string
+  default = ""
+}
+
+# Indicativo de pais que se antepone a celulares sin indicativo (57 = Colombia).
+variable "brevo_sms_default_country_code" {
+  type    = string
+  default = "57"
+}
+
 # ---------- ETL ----------
 variable "etl_enabled" {
   type    = bool

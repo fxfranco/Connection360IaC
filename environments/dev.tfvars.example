@@ -71,6 +71,16 @@ smtp_check_cert_revocation =
 # URL de Conexion360 para el enlace "Consultar mi envio" del correo de cambio de estado.
 smtp_conexion360_url       = ""
 
+# ---------- SMS (Brevo) ----------
+# URL base de la API de Brevo (con "/" final). Vacia = usa https://api.brevo.com/v3/
+brevo_sms_base_url             = ""
+# Remitente alfanumerico de hasta 11 caracteres. La API key va en secrets.auto.tfvars (brevo_sms_api_key).
+brevo_sms_sender               = ""
+# Vacio = usa smtp_conexion360_url en el texto del SMS.
+brevo_sms_conexion360_url      = ""
+# Indicativo que se antepone a celulares sin indicativo (57 = Colombia).
+brevo_sms_default_country_code = ""
+
 # ---------- Sincronizacion de usuarios Auth0 -> Notification ----------
 # El Api publica los usuarios de Auth0 al arrancar y luego cada user_sync_interval_minutes en el topico user_sync_topic;
 # Notification los guarda sin duplicados en la coleccion mongo_basic_user_collection. Kafka crea el topico automaticamente.

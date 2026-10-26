@@ -45,6 +45,12 @@ services:
       SmtpSettings__Conexion360Url: ${SMTP_CONEXION360_URL}
       SmtpSettings__TimeoutSeconds: ${SMTP_TIMEOUT_SECONDS}
       SmtpSettings__CheckCertificateRevocation: ${SMTP_CHECK_CERT_REVOCATION}
+      BrevoSettingsSMS__BaseUrl: ${BREVO_SMS_BASE_URL}
+      BrevoSettingsSMS__ApiKey: ${BREVO_SMS_API_KEY}
+      BrevoSettingsSMS__Sender: ${BREVO_SMS_SENDER}
+      BrevoSettingsSMS__Conexion360Url: ${BREVO_SMS_CONEXION360_URL}
+      BrevoSettingsSMS__DefaultCountryCode: ${BREVO_SMS_COUNTRY_CODE}
+      BrevoSettingsSMS__TimeoutSeconds: ${BREVO_SMS_TIMEOUT_SECONDS}
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
       interval: 15s

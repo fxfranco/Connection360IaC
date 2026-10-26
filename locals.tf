@@ -120,6 +120,12 @@ locals {
       SMTP_CONEXION360_URL          = var.smtp_conexion360_url
       SMTP_TIMEOUT_SECONDS          = "30"
       SMTP_CHECK_CERT_REVOCATION    = tostring(var.smtp_check_cert_revocation)
+      BREVO_SMS_BASE_URL            = var.brevo_sms_base_url
+      BREVO_SMS_API_KEY             = var.brevo_sms_api_key
+      BREVO_SMS_SENDER              = var.brevo_sms_sender
+      BREVO_SMS_CONEXION360_URL     = var.brevo_sms_conexion360_url != "" ? var.brevo_sms_conexion360_url : var.smtp_conexion360_url
+      BREVO_SMS_COUNTRY_CODE        = var.brevo_sms_default_country_code
+      BREVO_SMS_TIMEOUT_SECONDS     = "30"
     })
 
     etl = merge(local.env_common, local.env_mongo_observability, {
