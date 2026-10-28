@@ -1,0 +1,119 @@
+# =====================================================================================
+# CD AWS - DESTRUIR (Terraform destroy) todos los recursos del laboratorio de AWS Academy
+#   - Solo manual (workflow_dispatch). Exige escribir DESTRUIR como confirmación.
+#   - ANTES de lanzarlo, actualiza los secretos del laboratorio: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+#     AWS_SESSION_TOKEN (cambian en cada sesión del lab) y verifica TF_SECRETS_AUTO_TFVARS.
+#   - ATENCIÓN: borra también el volumen EBS con los datos de Postgres/Mongo/Kafka (README de Terraform.AWS).
+# =====================================================================================
+name: Connection360 CD AWS - Destruir (Terraform)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmacion:
+        description: 'Escribe DESTRUIR para confirmar (borra TODOS los recursos, incluido el volumen de datos)'
+        required: true
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-aws-connection360
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: '1.15.9'
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: '0'
+  AWS_PROFILE_NAME: ${{ secrets.AWS_PROFILE_NAME }}
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+  destroy:
+    name: Terraform destroy
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Verificar la confirmación
+        env:
+          CONFIRMACION: ${{ inputs.confirmacion }}
+        run: |
+          if [ "$CONFIRMACION" != "DESTRUIR" ]; then
+            echo "::error::Confirmación incorrecta. Escribe exactamente DESTRUIR al lanzar el workflow."
+            exit 1
+          fi
+
+      - name: Clonar el repositorio
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Configurar credenciales del laboratorio de AWS (perfil seminario2)
+        env:
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+        run: |
+          for v in AWS_KEY AWS_SECRET AWS_TOKEN; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Falta el secreto del laboratorio ($v). Actualiza AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY y AWS_SESSION_TOKEN."
+              exit 1
+            fi
+          done
+          AWS_KEY=$(printf '%s' "$AWS_KEY" | tr -d '[:space:]')
+          AWS_SECRET=$(printf '%s' "$AWS_SECRET" | tr -d '[:space:]')
+          AWS_TOKEN=$(printf '%s' "$AWS_TOKEN" | tr -d '[:space:]')
+          echo "::add-mask::$AWS_KEY"; echo "::add-mask::$AWS_SECRET"; echo "::add-mask::$AWS_TOKEN"
+          mkdir -p ~/.aws
+          printf '[%s]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s\n' \
+            "$AWS_PROFILE_NAME" "$AWS_KEY" "$AWS_SECRET" "$AWS_TOKEN" > ~/.aws/credentials
+          printf '[profile %s]\nregion=%s\noutput=json\n' "$AWS_PROFILE_NAME" "$AWS_DEFAULT_REGION" > ~/.aws/config
+          chmod 600 ~/.aws/credentials
+
+      - name: Verificar que las credenciales del laboratorio siguen vigentes
+        run: |
+          if ! aws sts get-caller-identity --profile "$AWS_PROFILE_NAME" --query Arn --output text; then
+            echo "::error::Las credenciales del laboratorio no son válidas o vencieron. Reinicia el lab en AWS Academy y actualiza los 3 secretos."
+            exit 1
+          fi
+
+      # Terraform necesita todas las variables (también para destruir), por eso se vuelve a generar el archivo de secretos.
+      - name: Generar secrets.auto.tfvars desde el secreto TF_SECRETS_AUTO_TFVARS
+        env:
+          TF_SECRETS: ${{ secrets.TF_SECRETS_AUTO_TFVARS }}
+        run: |
+          if [ -z "$TF_SECRETS" ]; then
+            echo "::error::Falta el secreto TF_SECRETS_AUTO_TFVARS (pega ahí el contenido completo de tu secrets.auto.tfvars)."
+            exit 1
+          fi
+          printf '%s\n' "$TF_SECRETS" | tr -d '\r' > secrets.auto.tfvars
+          grep -oE '"[^"]{6,}"' secrets.auto.tfvars | sed 's/^"//; s/"$//' | sort -u | while IFS= read -r value; do
+            echo "::add-mask::$value"
+          done
+
+      - name: terraform init
+        run: terraform init -reconfigure -input=false
+
+      - name: terraform plan -destroy (muestra lo que se va a borrar)
+        run: terraform plan -destroy -var-file=environments/dev.tfvars -input=false -lock-timeout=5m -out=destroy.tfplan
+
+      - name: terraform apply (ejecuta el destroy)
+        run: terraform apply -input=false -lock-timeout=5m destroy.tfplan
+
+      - name: Resumen
+        run: |
+          {
+            echo "## Recursos destruidos"
+            echo
+            echo "El estado remoto de Terraform quedó vacío. Para volver a crear todo, lanza el workflow **Connection360 CD AWS - Desplegar (Terraform)**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Limpiar credenciales y secretos del runner
+        if: ${{ always() }}
+        run: rm -f secrets.auto.tfvars destroy.tfplan ~/.aws/credentials ~/.aws/config
