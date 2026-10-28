@@ -1,0 +1,151 @@
+# =====================================================================================
+# CD AWS - DESPLEGAR (Terraform apply) en el laboratorio de AWS Academy
+#   - Solo manual (workflow_dispatch).
+#   - ANTES de lanzarlo, actualiza los 3 secretos del laboratorio (cambian en cada sesión del lab):
+#       AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
+#     (Settings > Secrets and variables > Actions > Repository secrets; valores en AWS Academy: AWS Details > AWS CLI)
+#   - Secreto TF_SECRETS_AUTO_TFVARS: contenido COMPLETO de tu secrets.auto.tfvars local (se escribe en el runner).
+#   - Al final muestra los outputs de Terraform: alb_dns, data_volume_id, gateway_public_ip, private_ips, ssh_comandos.
+# =====================================================================================
+name: Connection360 CD AWS - Desplegar (Terraform)
+
+on:
+  workflow_dispatch:
+    inputs:
+      my_ip:
+        description: 'IP pública con máscara para SSH al gateway (ej. 190.251.241.154/32). Vacío = la de environments/dev.tfvars'
+        required: false
+        type: string
+        default: ''
+      solo_plan:
+        description: 'Solo mostrar el plan (no crea recursos)'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Una sola operación de Terraform a la vez sobre este estado.
+concurrency:
+  group: terraform-aws-connection360
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: '1.15.9'          # la misma que usas en local
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: '0'
+  AWS_PROFILE_NAME: ${{ secrets.AWS_PROFILE_NAME }}   # el backend S3 (providers.tf) y dev.tfvars usan este perfil
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+  deploy:
+    name: Terraform apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false   # salida limpia para `terraform output -raw/-json`
+
+      - name: Configurar credenciales del laboratorio de AWS (perfil seminario2)
+        env:
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+        run: |
+          for v in AWS_KEY AWS_SECRET AWS_TOKEN; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Falta el secreto del laboratorio ($v). Actualiza AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY y AWS_SESSION_TOKEN."
+              exit 1
+            fi
+          done
+          # Se quitan espacios/saltos de línea que suelen colarse al pegar los valores.
+          AWS_KEY=$(printf '%s' "$AWS_KEY" | tr -d '[:space:]')
+          AWS_SECRET=$(printf '%s' "$AWS_SECRET" | tr -d '[:space:]')
+          AWS_TOKEN=$(printf '%s' "$AWS_TOKEN" | tr -d '[:space:]')
+          echo "::add-mask::$AWS_KEY"; echo "::add-mask::$AWS_SECRET"; echo "::add-mask::$AWS_TOKEN"
+          mkdir -p ~/.aws
+          printf '[%s]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s\n' \
+            "$AWS_PROFILE_NAME" "$AWS_KEY" "$AWS_SECRET" "$AWS_TOKEN" > ~/.aws/credentials
+          printf '[profile %s]\nregion=%s\noutput=json\n' "$AWS_PROFILE_NAME" "$AWS_DEFAULT_REGION" > ~/.aws/config
+          chmod 600 ~/.aws/credentials
+
+      - name: Verificar que las credenciales del laboratorio siguen vigentes
+        run: |
+          if ! aws sts get-caller-identity --profile "$AWS_PROFILE_NAME" --query Arn --output text; then
+            echo "::error::Las credenciales del laboratorio no son válidas o vencieron. Reinicia el lab en AWS Academy y actualiza los 3 secretos."
+            exit 1
+          fi
+
+      - name: Generar secrets.auto.tfvars desde el secreto TF_SECRETS_AUTO_TFVARS
+        env:
+          TF_SECRETS: ${{ secrets.TF_SECRETS_AUTO_TFVARS }}
+        run: |
+          if [ -z "$TF_SECRETS" ]; then
+            echo "::error::Falta el secreto TF_SECRETS_AUTO_TFVARS (pega ahí el contenido completo de tu secrets.auto.tfvars)."
+            exit 1
+          fi
+          printf '%s\n' "$TF_SECRETS" | tr -d '\r' > secrets.auto.tfvars
+          # GitHub solo enmascara el secreto completo o cada línea completa; aquí se enmascara cada VALOR entre comillas,
+          # para que no aparezca en ningún log aunque Terraform lo imprima dentro de otra cadena.
+          grep -oE '"[^"]{6,}"' secrets.auto.tfvars | sed 's/^"//; s/"$//' | sort -u | while IFS= read -r value; do
+            echo "::add-mask::$value"
+          done
+          echo "secrets.auto.tfvars generado ($(grep -c '=' secrets.auto.tfvars) asignaciones)."
+
+      - name: terraform init
+        run: terraform init -reconfigure -input=false
+
+      - name: terraform validate
+        run: terraform validate
+
+      - name: terraform plan
+        env:
+          MY_IP: ${{ inputs.my_ip }}
+        run: |
+          args=(-var-file=environments/dev.tfvars -input=false -lock-timeout=5m -out=tfplan)
+          if [ -n "$MY_IP" ]; then args+=(-var "my_ip=$MY_IP"); fi
+          terraform plan "${args[@]}"
+
+      - name: terraform apply (crea los recursos)
+        if: ${{ !inputs.solo_plan }}
+        run: terraform apply -input=false -lock-timeout=5m tfplan
+
+      - name: Outputs del despliegue
+        if: ${{ !inputs.solo_plan }}
+        run: |
+          echo "================ terraform output ================"
+          terraform output
+          {
+            echo "## Despliegue completado"
+            echo
+            echo "| Output | Valor |"
+            echo "|---|---|"
+            echo "| alb_dns | \`$(terraform output -raw alb_dns)\` |"
+            echo "| gateway_public_ip | \`$(terraform output -raw gateway_public_ip)\` |"
+            echo "| data_volume_id | \`$(terraform output -raw data_volume_id)\` |"
+            echo
+            echo "### private_ips"
+            echo
+            echo "| Instancia | IP privada |"
+            echo "|---|---|"
+            terraform output -json private_ips | jq -r 'to_entries[] | "| \(.key) | `\(.value)` |"'
+            echo
+            echo "### ssh_comandos"
+            echo
+            echo '```bash'
+            terraform output -json ssh_comandos | jq -r 'to_entries[] | "# \(.key)\n\(.value)"'
+            echo '```'
+            echo
+            echo "Prueba: \`curl http://$(terraform output -raw alb_dns)/health\` (las instancias tardan unos minutos en descargar e iniciar los contenedores)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Limpiar credenciales y secretos del runner
+        if: ${{ always() }}
+        run: rm -f secrets.auto.tfvars tfplan ~/.aws/credentials ~/.aws/config
