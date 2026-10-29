@@ -9,9 +9,7 @@ aws_profile  = "patArquit"
 project_name = "connection360"
 
 # ---------- Red ----------
-#my_ip        = "200.122.208.2/32" # Universidad tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
-#my_ip        = "191.156.35.95/32" # Celular tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
-my_ip        = "190.251.241.154/32" # Casa tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
+my_ip        = "200.122.208.2/32"
 vpc_cidr     = "172.20.0.0/23"
 pub_subnets  = ["172.20.0.0/26", "172.20.0.64/26"]
 priv_subnets = ["172.20.0.128/26", "172.20.0.192/26"]

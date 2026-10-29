@@ -67,7 +67,7 @@ hace de salto/bastión).
 2. Credenciales del Learner Lab en el perfil `patArquit` (**cambian en cada sesión**): en AWS Academy abre
    *AWS Details → AWS CLI* y copia `aws_access_key_id`, `aws_secret_access_key` y `aws_session_token` en
    `~/.aws/credentials` (perfil `[patArquit]`).
-3. El key pair `KP-Sem2` (o el que pongas en `key_name`) ya existe en la región.
+3. El key pair `KP-PatArquit` (o el que pongas en `key_name`) ya existe en la región.
 4. **Imágenes en Docker Hub** de los 5 componentes + la de migraciones:
    - Componentes: `./deploy/build-images.ps1 -Push` (en la raíz de Connection360ApiCore).
    - Migraciones: ver `Connection360DataBase/postgres_db/deploy-migrations-image.md`
