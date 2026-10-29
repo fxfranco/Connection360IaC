@@ -9,9 +9,7 @@ aws_profile  = "seminario2"
 project_name = "connection360"
 
 # ---------- Red ----------
-#my_ip        = "200.122.208.2/32" # Universidad tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
-#my_ip        = "191.156.35.95/32" # Celular tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
-my_ip        = "190.251.241.154/32" # Casa tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
+my_ip        = "200.122.208.2/32"
 vpc_cidr     = "172.20.0.0/23"
 pub_subnets  = ["172.20.0.0/26", "172.20.0.64/26"]
 priv_subnets = ["172.20.0.128/26", "172.20.0.192/26"]
@@ -44,52 +42,52 @@ migrations_version = "latest"
 # Si los repositorios de Docker Hub son privados, define dockerhub_username y dockerhub_token en secrets.auto.tfvars
 
 # ---------- Bases de datos / Kafka ----------
-postgres_image_tag            = "" # PostgreSQL 17+ (las migraciones usan GRANT MAINTAIN)
-mongo_image_tag               = ""
-kafka_image_tag               = ""
-postgres_db_name              = ""
-postgres_admin_user           = ""
-mongo_root_user               = ""
-mongo_database                = ""
-mongo_notification_collection = ""
-mongo_basic_user_collection   = ""
-kafka_topic                   = ""
-kafka_group_id                = ""
+postgres_image_tag            = "18-alpine" # PostgreSQL 17+ (las migraciones usan GRANT MAINTAIN)
+mongo_image_tag               = "8.0"
+kafka_image_tag               = "7.5.0"
+postgres_db_name              = "connection360_db"
+postgres_admin_user           = "postgres"
+mongo_root_user               = "root"
+mongo_database                = "connection360noti_db"
+mongo_notification_collection = "notificationMessage"
+mongo_basic_user_collection   = "basicUserData"
+kafka_topic                   = "notification-events"
+kafka_group_id                = "notification-consumer-group"
 
 # ---------- Aplicacion ----------
-jwt_issuer   = ""
-jwt_audience = ""
-jwt_roles    = ""
+jwt_issuer   = "https://login.conexion360.space/"
+jwt_audience = "https://api.conexion360.com"
+jwt_roles    = "https://conexion360.space/roles"
 
 # Origenes del front permitidos por CORS (1 a 4). Pon aqui la URL real de tu front.
-cors_origins = ["",""]
+cors_origins = ["https://conexion360.space","http://localhost:4200"]
 
-smtp_server                = ""
-smtp_port                  = 
-smtp_sender_name           = ""
-smtp_check_cert_revocation = 
+smtp_server                = "smtp.gmail.com"
+smtp_port                  = 465
+smtp_sender_name           = "Conexión360App"
+smtp_check_cert_revocation = false
 # URL de Conexion360 para el enlace "Consultar mi envio" del correo de cambio de estado.
-smtp_conexion360_url       = ""
+smtp_conexion360_url       = "https://conexion360.space"
 
 # ---------- SMS (Brevo) ----------
 # URL base de la API de Brevo (con "/" final). Vacia = usa https://api.brevo.com/v3/
-brevo_sms_base_url             = ""
+brevo_sms_base_url             = "https://api.brevo.com/v3/"
 # Remitente alfanumerico de hasta 11 caracteres. La API key va en secrets.auto.tfvars (brevo_sms_api_key).
-brevo_sms_sender               = ""
+brevo_sms_sender               = "Conexion360"
 # Vacio = usa smtp_conexion360_url en el texto del SMS.
-brevo_sms_conexion360_url      = ""
+brevo_sms_conexion360_url      = "https://conexion360.space"
 # Indicativo que se antepone a celulares sin indicativo (57 = Colombia).
-brevo_sms_default_country_code = ""
+brevo_sms_default_country_code = "57"
 
 # ---------- Sincronizacion de usuarios Auth0 -> Notification ----------
 # El Api publica los usuarios de Auth0 al arrancar y luego cada user_sync_interval_minutes en el topico user_sync_topic;
 # Notification los guarda sin duplicados en la coleccion mongo_basic_user_collection. Kafka crea el topico automaticamente.
 # De cada usuario se envian el id de Auth0, su correo y, de su user_metadata, document, fullName y phone.number.
-user_sync_enabled               = 
-user_sync_topic                 = ""
-user_sync_interval_minutes      = 
-user_sync_batch_size            = 
-user_sync_startup_retry_seconds = 
+user_sync_enabled               = true
+user_sync_topic                 = "notification-users"
+user_sync_interval_minutes      = 10
+user_sync_batch_size            = 200
+user_sync_startup_retry_seconds = 30
 # Vacio = "<kafka_group_id>-users"
 user_sync_group_id = ""
 

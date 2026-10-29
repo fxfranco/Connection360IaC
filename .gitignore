@@ -18,4 +18,3 @@ secrets.auto.tfvars
 *.key
 
 # OJO: .terraform.lock.hcl SI se versiona.
-environments/dev.tfvars
