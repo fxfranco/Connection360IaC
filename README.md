@@ -64,9 +64,9 @@ hace de salto/bastión).
 ## Prerrequisitos
 
 1. Terraform ≥ 1.10 (el backend usa `use_lockfile`) y AWS CLI.
-2. Credenciales del Learner Lab en el perfil `seminario2` (**cambian en cada sesión**): en AWS Academy abre
+2. Credenciales del Learner Lab en el perfil `patArquit` (**cambian en cada sesión**): en AWS Academy abre
    *AWS Details → AWS CLI* y copia `aws_access_key_id`, `aws_secret_access_key` y `aws_session_token` en
-   `~/.aws/credentials` (perfil `[seminario2]`).
+   `~/.aws/credentials` (perfil `[patArquit]`).
 3. El key pair `KP-Sem2` (o el que pongas en `key_name`) ya existe en la región.
 4. **Imágenes en Docker Hub** de los 5 componentes + la de migraciones:
    - Componentes: `./deploy/build-images.ps1 -Push` (en la raíz de Connection360ApiCore).
@@ -119,8 +119,8 @@ Logs: `/var/log/connection360-bootstrap.log` y `/var/log/cloud-init-output.log` 
 
 ```bash
 # SSH (los comandos exactos están en el output ssh_comandos)
-ssh -i KP-Sem2.pem ec2-user@<gateway_public_ip>
-ssh -i KP-Sem2.pem -J ec2-user@<gateway_public_ip> ec2-user@172.20.0.138    # api
+ssh -i KP-PatArquit.pem ec2-user@<gateway_public_ip>
+ssh -i KP-PatArquit.pem -J ec2-user@<gateway_public_ip> ec2-user@172.20.0.138    # api
 
 sudo docker ps
 sudo docker logs -f connection360_api

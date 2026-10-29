@@ -5,11 +5,13 @@
 
 # ---------- General ----------
 aws_region   = "us-east-1"
-aws_profile  = "seminario2"
+aws_profile  = "patArquit"
 project_name = "connection360"
 
 # ---------- Red ----------
-my_ip        = "200.122.208.2/32"
+#my_ip        = "200.122.208.2/32" # Universidad tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
+#my_ip        = "191.156.35.95/32" # Celular tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
+my_ip        = "190.251.241.154/32" # Casa tu IP publica: SSH al gateway. Actualizala si cambia (curl ifconfig.me)
 vpc_cidr     = "172.20.0.0/23"
 pub_subnets  = ["172.20.0.0/26", "172.20.0.64/26"]
 priv_subnets = ["172.20.0.128/26", "172.20.0.192/26"]
@@ -18,7 +20,7 @@ availability_zone_a = "us-east-1a"
 availability_zone_b = "us-east-1b"
 
 # ---------- Instancias (AWS Academy: familias t3 hasta large) ----------
-key_name                   = "KP-Sem2"
+key_name                   = "KP-PatArquit"
 instance_profile_name      = "" # opcional: "LabInstanceProfile" habilita Session Manager (SSM); el despliegue no lo necesita
 gateway_instance_type      = "t3.small"
 api_instance_type          = "t3.medium"

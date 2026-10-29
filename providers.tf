@@ -5,12 +5,12 @@ terraform {
   # "01-k3s-lab/terraform.tfstate" y NO se toca). Después de cambiar la key ejecuta:
   #   terraform init -reconfigure
   backend "s3" {
-    bucket       = "chfranco.sem2vscode2026-2"
+    bucket       = "chfranco.patarquitvscode2026-2"
     key          = "connection360/terraform.tfstate"
     use_lockfile = true
     region       = "us-east-1"
     encrypt      = true
-    profile      = "seminario2"
+    profile      = "patArquit"
   }
 
   required_providers {

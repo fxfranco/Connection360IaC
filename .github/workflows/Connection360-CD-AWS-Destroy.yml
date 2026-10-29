@@ -54,7 +54,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
-      - name: Configurar credenciales del laboratorio de AWS (perfil seminario2)
+      - name: Configurar credenciales del laboratorio de AWS (perfil patArquit)
         env:
           AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

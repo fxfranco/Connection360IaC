@@ -12,7 +12,7 @@ variable "aws_region" {
 
 variable "aws_profile" {
   type    = string
-  default = "seminario2"
+  default = "patArquit"
 }
 
 variable "project_name" {
