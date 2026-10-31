@@ -41,6 +41,13 @@ services:
       ExternalApi__Apis__OPENSTREETMAP__DataEndpoint: /search?q=
       ExternalApi__Apis__OPENSTREETMAP__ApiKey: ${OPENSTREETMAP_API_KEY}
       ExternalApi__Apis__OPENSTREETMAP__TimeoutSeconds: ${EXTERNAL_API_TIMEOUT_SECONDS}
+      # Cache en memoria de coordenadas (OpenStreetMap) del detalle de envios, con tope de memoria.
+      CoordinatesCache__Enabled: ${COORDINATES_CACHE_ENABLED}
+      CoordinatesCache__MaxSizeBytes: ${COORDINATES_CACHE_MAX_SIZE_BYTES}
+      CoordinatesCache__EvictionPercentage: ${COORDINATES_CACHE_EVICTION_PERCENTAGE}
+      CoordinatesCache__AbsoluteExpiration: ${COORDINATES_CACHE_ABSOLUTE_EXPIRATION}
+      CoordinatesCache__SlidingExpiration: ${COORDINATES_CACHE_SLIDING_EXPIRATION}
+      CoordinatesCache__MaxKeyLength: ${COORDINATES_CACHE_MAX_KEY_LENGTH}
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
       interval: 15s

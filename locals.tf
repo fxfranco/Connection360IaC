@@ -102,6 +102,14 @@ locals {
       USER_SYNC_INTERVAL_MINUTES      = tostring(var.user_sync_interval_minutes)
       USER_SYNC_BATCH_SIZE            = tostring(var.user_sync_batch_size)
       USER_SYNC_STARTUP_RETRY_SECONDS = tostring(var.user_sync_startup_retry_seconds)
+
+      # Cache en memoria de coordenadas de OpenStreetMap (CoordinatesCache__* en el Api). El tope se pasa en bytes.
+      COORDINATES_CACHE_ENABLED             = tostring(var.coordinates_cache_enabled)
+      COORDINATES_CACHE_MAX_SIZE_BYTES      = tostring(var.coordinates_cache_max_size_mb * 1024 * 1024)
+      COORDINATES_CACHE_EVICTION_PERCENTAGE = tostring(var.coordinates_cache_eviction_percentage)
+      COORDINATES_CACHE_ABSOLUTE_EXPIRATION = format("%d.00:00:00", var.coordinates_cache_absolute_expiration_days)
+      COORDINATES_CACHE_SLIDING_EXPIRATION  = format("%d.00:00:00", var.coordinates_cache_sliding_expiration_days)
+      COORDINATES_CACHE_MAX_KEY_LENGTH      = tostring(var.coordinates_cache_max_key_length)
     })
 
     notification = merge(local.env_common, local.env_jwt, local.env_mongo_observability, local.env_kafka, {

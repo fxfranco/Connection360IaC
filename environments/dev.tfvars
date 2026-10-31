@@ -91,6 +91,17 @@ user_sync_startup_retry_seconds = 30
 # Vacio = "<kafka_group_id>-users"
 user_sync_group_id = ""
 
+# ---------- Cache de coordenadas (Connection360.Api: detalle de envios -> OpenStreetMap) ----------
+# Las coordenadas de un lugar casi no cambian: se guardan en memoria para no consultar a Nominatim en cada detalle de envio.
+# El tope de memoria evita que crezca sin limite en la instancia (4 GiB compartidos con el resto de contenedores);
+# al llenarse se descartan primero las entradas mas viejas. coordinates_cache_enabled = false la desactiva.
+coordinates_cache_enabled                  = true
+coordinates_cache_max_size_mb              = 10
+coordinates_cache_eviction_percentage      = 0.2
+coordinates_cache_absolute_expiration_days = 30
+coordinates_cache_sliding_expiration_days  = 7
+coordinates_cache_max_key_length           = 200
+
 # ---------- ETL ----------
 etl_enabled         = true
 etl_cron            = "*/5 * * * *"
