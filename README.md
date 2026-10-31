@@ -154,6 +154,11 @@ entra por SSH, edita `/opt/connection360/.env` y ejecuta `sudo /opt/connection36
   «Insufficient scope» al consultar el rol de un usuario). De cada usuario se envían el id de Auth0, su correo y, de su
   `user_metadata`, `document`, `fullName` y `phone.number`. Auth0 solo permite paginar los primeros 1000 usuarios
   de `GET /users`; el Api lo registra como advertencia si se alcanza ese tope.
+- **Caché de coordenadas** (`coordinates_cache_*` en `dev.tfvars`, sin secretos): `Connection360.Api` guarda en memoria las
+  coordenadas de OpenStreetMap del detalle de envíos para no consultar a Nominatim en cada petición. `coordinates_cache_max_size_mb`
+  (10 por defecto, ~16.000 lugares) es el tope de memoria; al llenarse se descartan primero las entradas más viejas. Se envía al
+  contenedor como `CoordinatesCache__*`; `coordinates_cache_enabled = false` la desactiva. Requiere una imagen del Api que ya
+  incluya la caché.
 - Los secretos quedan en el `user_data` de las instancias y en el estado de Terraform (S3 cifrado). Trata el bucket
   del estado y el acceso SSH como sensibles. Nada de esto va dentro de las imágenes.
 

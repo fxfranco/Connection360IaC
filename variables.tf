@@ -442,8 +442,64 @@ variable "user_sync_group_id" {
   default     = ""
 }
 
+variable "coordinates_cache_enabled" {
+  description = "Cache en memoria de las coordenadas de OpenStreetMap en Connection360.Api (detalle de envios). false = siempre consulta a Nominatim"
+  type        = bool
+  default     = true
+}
+
+variable "coordinates_cache_max_size_mb" {
+  description = "Tope de memoria de la cache de coordenadas, en MB (~1.600 lugares por MB). Al llenarse se descartan primero las entradas mas viejas"
+  type        = number
+  default     = 10
+  validation {
+    condition     = var.coordinates_cache_max_size_mb >= 1 && var.coordinates_cache_max_size_mb <= 256
+    error_message = "coordinates_cache_max_size_mb debe estar entre 1 y 256 (la instancia comparte 4 GiB con el resto de contenedores)."
+  }
+}
+
+variable "coordinates_cache_eviction_percentage" {
+  description = "Fraccion de las entradas (0-1] que se libera de una vez al llegar al tope; se eliminan primero las menos usadas recientemente"
+  type        = number
+  default     = 0.2
+  validation {
+    condition     = var.coordinates_cache_eviction_percentage > 0 && var.coordinates_cache_eviction_percentage <= 1
+    error_message = "coordinates_cache_eviction_percentage debe estar en el rango (0, 1]."
+  }
+}
+
+variable "coordinates_cache_absolute_expiration_days" {
+  description = "Dias maximos que una coordenada vive en la cache desde que se guardo"
+  type        = number
+  default     = 30
+  validation {
+    condition     = var.coordinates_cache_absolute_expiration_days >= 1 && floor(var.coordinates_cache_absolute_expiration_days) == var.coordinates_cache_absolute_expiration_days
+    error_message = "coordinates_cache_absolute_expiration_days debe ser un entero mayor o igual a 1."
+  }
+}
+
+variable "coordinates_cache_sliding_expiration_days" {
+  description = "Dias sin consultarse tras los cuales una coordenada caduca"
+  type        = number
+  default     = 7
+  validation {
+    condition     = var.coordinates_cache_sliding_expiration_days >= 1 && floor(var.coordinates_cache_sliding_expiration_days) == var.coordinates_cache_sliding_expiration_days
+    error_message = "coordinates_cache_sliding_expiration_days debe ser un entero mayor o igual a 1."
+  }
+}
+
+variable "coordinates_cache_max_key_length" {
+  description = "Longitud maxima del nombre del lugar que se cachea; los mas largos se consultan siempre a Nominatim"
+  type        = number
+  default     = 200
+  validation {
+    condition     = var.coordinates_cache_max_key_length >= 1 && floor(var.coordinates_cache_max_key_length) == var.coordinates_cache_max_key_length
+    error_message = "coordinates_cache_max_key_length debe ser un entero mayor o igual a 1."
+  }
+}
+
 variable "external_api_allow_invalid_cert" {
-  description = "SOLO DESARROLLO: el ETL no valida el certificado TLS de las APIs externas"
+  description = "SOLO DESARROLLO: el ETL tolera certificados TLS autofirmados o de otro host en las APIs externas (rechaza los vencidos o revocados)"
   type        = bool
   default     = false
 }
