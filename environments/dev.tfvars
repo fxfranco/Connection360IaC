@@ -9,7 +9,7 @@ aws_profile  = "patArquit"
 project_name = "connection360"
 
 # ---------- Red ----------
-my_ip        = "200.122.208.2/32"
+my_ip        = "190.251.241.154/32"
 vpc_cidr     = "172.20.0.0/23"
 pub_subnets  = ["172.20.0.0/26", "172.20.0.64/26"]
 priv_subnets = ["172.20.0.128/26", "172.20.0.192/26"]
@@ -104,7 +104,7 @@ coordinates_cache_max_key_length           = 200
 
 # ---------- ETL ----------
 etl_enabled         = true
-etl_cron            = "*/5 * * * *"
+etl_cron            = "*/1 * * * *"
 etl_timezone        = "America/Bogota"
 etl_timeout_minutes = 15
 

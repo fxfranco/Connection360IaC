@@ -376,7 +376,7 @@ variable "etl_enabled" {
 
 variable "etl_cron" {
   type    = string
-  default = "*/5 * * * *"
+  default = "*/1 * * * *"
 }
 
 variable "etl_timezone" {
